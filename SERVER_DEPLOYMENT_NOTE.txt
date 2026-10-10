@@ -1,0 +1,15 @@
+ICE HOCKEY CLIENT UPDATE — MULTIPLAYER SMOOTHING + PING
+
+Client changes in this build:
+- Removed the LIVE MATCH badge from gameplay.
+- Added a live PING (ms) indicator in the gameplay HUD. Green is low latency, amber is moderate, red is high.
+- Smoothed remote puck snapshots and added short, bounded extrapolation on the non-authoritative client.
+- Improved swept collision detection to account for skater movement as well as puck movement, helping reduce puck-through-player moments during fast movement/network delay.
+- Tightened the mobile gameplay HUD and positioned the ping indicator below the score.
+
+IMPORTANT SERVER-SIDE LIMITATION (not fixable by the static client ZIP alone):
+The configured server is https://ice-hockey-server.vercel.app. The current server.js stores matchmaking queue, online players, friend requests, and friends in in-memory variables/Maps. Vercel Functions can run separate instances and do not provide reliable shared in-memory state between requests/instances. This matches symptoms such as one successful match followed by matchmaking failures and friends disappearing.
+
+For dependable multiplayer/friend persistence, the server needs to run as a long-lived Node.js service (e.g. Render/Railway/Fly/VPS) and persist friend relationships/requests in durable storage (database or persistent disk). Deploying the existing in-memory server to Vercel again will not reliably solve this. The current client continues to use the same Vercel URL; after deploying the server to a persistent host, update SERVER_URL in index.html to that host's HTTPS URL.
+
+Friend request message “Enter a player name” is emitted by the server when its socket-side player name or target name is empty. If it reappears, check the server logs and ensure the profile has been accepted before requesting. The server-side state/hosting issue should be addressed alongside the client update.

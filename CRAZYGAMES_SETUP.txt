@@ -1,0 +1,10 @@
+CRAZYGAMES BASIC LAUNCH SETUP
+
+1. Client SDK: CrazyGames SDK v3 (crazygames-sdk-v3.js) is included in index.html.
+2. Basic Launch is configured without ad calls. Rewarded-ad rewards are disabled and are not granted.
+3. Online server: https://ice-hockey-server.vercel.app
+4. Upload the client package contents to CrazyGames. Do not include server secrets or node_modules.
+5. Test multiplayer, audio, profile persistence, and controls in the CrazyGames preview before submission.
+
+
+UI fixes: coins are top-left; Settings and Logo are bottom-right; Coin.png and Logo.png are bundled under assets/images. Join Room and Friend Request payloads now include compatibility aliases. Leaderboard supports multiple response shapes and a manual Refresh button. These client-side changes still require testing against the live server; unsupported server-side events/endpoints cannot be guaranteed from a client-only ZIP.
