@@ -1662,8 +1662,9 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             if(gameLoopRunning) return;
             gameLoopRunning=true;
             const frame=(timestamp)=>{
-              lastFrameAt=timestamp||performance.now();
+              const frameTime=timestamp||performance.now();
               update(); draw();
+              lastFrameAt=frameTime;
               if(inGame) requestAnimationFrame(frame);
               else gameLoopRunning=false;
             };
