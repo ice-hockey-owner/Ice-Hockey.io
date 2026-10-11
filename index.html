@@ -598,7 +598,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         const hudP2Name = document.getElementById('hud-p2-name');
 
         const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d',{alpha:false,desynchronized:true});
         const GAME_WIDTH = 1024, GAME_HEIGHT = 640;
         // Render at 1280x720 backing resolution instead of 1920x1080 to reduce GPU fill cost on lower-end clients.
         canvas.width=1280; canvas.height=720;
@@ -1066,7 +1066,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
           setAvatarImage(hudP1Avatar,profileData.avatar);
           restoreAcceptedName(d?.message || 'Username already exists.');
           attachmentPreview.textContent=d?.message||'Profile rejected by safety moderation.';
-          friendStatus.textContent='Username already exists.';
+          friendStatus.textContent=d?.message||'Profile rejected by safety moderation.';
           setTimeout(()=>{ if(friendStatus.textContent==='Username already exists.') friendStatus.textContent=''; },3500);
         });
         socket.on('rewarded_ad_status', d=>{ rewardedAdRemaining=Math.max(0,Number(d?.remaining ?? 2)); renderRewardAdButton(); });
@@ -1653,7 +1653,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         function selectedPlayerColorFor(id){ const map={'player-blue':'#0284c7','player-red':'#ef4444','player-violet':'#7957d8','player-mint':'#23bda0','player-gold':'#d6a62c'}; return map[id]||map['player-blue']; }
         function selectedPlayerColor(){ return selectedPlayerColorFor(customization.player); }
         function frameStyle(id){return ({'frame-classic':{stroke:'#7dcbea',glow:'rgba(125,203,234,.35)'},'frame-ice':{stroke:'#18c8ff',glow:'rgba(24,200,255,.65)'},'frame-ruby':{stroke:'#ef476f',glow:'rgba(239,71,111,.5)'},'frame-gold':{stroke:'#e8b63f',glow:'rgba(232,182,63,.52)'},'frame-neon':{stroke:'#9b6cff',glow:'rgba(155,108,255,.7)'},'frame-aurora':{stroke:'#35e0b0',glow:'rgba(53,224,176,.62)'},'frame-frost':{stroke:'#b9e9ff',glow:'rgba(185,233,255,.72)'},'frame-cosmic':{stroke:'#d66cff',glow:'rgba(214,108,255,.72)'}}[id]||{stroke:'#7dcbea',glow:'rgba(125,203,234,.35)'});}
-        function drawFramedPlayer(x,y,r,fill,frameId){const f=frameStyle(frameId);ctx.save();ctx.shadowColor=f.glow;ctx.shadowBlur=frameId==='frame-classic'?7:16;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=4;ctx.strokeStyle=f.stroke;ctx.stroke();ctx.restore();}
+        function drawFramedPlayer(x,y,r,fill,frameId){const f=frameStyle(frameId);ctx.save();ctx.shadowColor=f.glow;ctx.shadowBlur=frameId==='frame-classic'?3:8;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=4;ctx.strokeStyle=f.stroke;ctx.stroke();ctx.restore();}
         const playerTrailPoints=[]; const opponentTrailPoints=[];
         const TRAIL_STYLES={'trail-blue':['#6be8ff','#138cff'],'trail-purple':['#ef8cff','#7b2cff'],'trail-aurora':['#8dffda','#24b7ff'],'trail-fire':['#fff09a','#ff4d27'],'trail-gold':['#fff0a6','#d99a19']};
         function recordTrail(points, entity){
