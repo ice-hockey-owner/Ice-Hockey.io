@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ice Hockey Online</title>
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
     <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Baloo 2",system-ui,sans-serif;font-weight:800}
 :root{--ice:#eaf7ff;--blue:#18bfff;--blue2:#0877ff;--navy:#071321;--panel:rgba(7,19,33,.88);--line:rgba(103,210,255,.28);--green:#22e6a7;--red:#ff4968;--purple:#9b6cff}
 html,body{width:100%;height:100%;overflow:hidden;background:#020811;color:#fff;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #landscape-overlay{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#123e5c,#020811 75%);text-align:center;padding:24px}
@@ -681,7 +684,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         function fontGradient(id){ return ({'font-ocean':'linear-gradient(90deg,#1769e8,#12b6ff)','font-royal':'linear-gradient(90deg,#7b2cff,#ff3dbb)','font-tropical':'linear-gradient(90deg,#00a878,#ffd33d)','font-sunset':'linear-gradient(90deg,#ff5c5c,#ff9f43)','font-aqua':'linear-gradient(90deg,#0f766e,#06b6d4)','font-aurora':'linear-gradient(90deg,#00C9FF,#92FE9D,#FF94B4,#3A29FF)','font-candy':'linear-gradient(90deg,#FF75B5,#B575FF,#75E6FF,#FFE475)','font-icefire':'linear-gradient(90deg,#00467F,#00F2FE,#FF9000,#FF416C)'}[id]||'linear-gradient(90deg,#1769e8,#12b6ff)'); }
         function customizationSnapshot(){ return {frame:customization.frame,player:customization.player,font:customization.font}; }
         function profilePayload(){ ensureProfileId(); return {...profileData, customization:customizationSnapshot()}; }
-        function applyNameStyle(el, fontId){ if(!el)return; el.style.fontFamily='Inter,system-ui,sans-serif'; el.style.backgroundImage=fontGradient(fontId); el.style.webkitBackgroundClip='text'; el.style.backgroundClip='text'; el.style.color='transparent'; }
+        function applyNameStyle(el, fontId){ if(!el)return; el.style.fontFamily='"Baloo 2",system-ui,sans-serif'; el.style.fontWeight='800'; el.style.backgroundImage=fontGradient(fontId); el.style.webkitBackgroundClip='text'; el.style.backgroundClip='text'; el.style.color='transparent'; }
         function applyHudCustomization(el, c){ if(!el)return; const f=frameStyle(c?.frame||'frame-classic'); el.style.border='2px solid '+f.stroke; el.style.boxShadow='0 0 12px '+f.glow; el.style.borderRadius='50%'; }
         function setAvatarImage(img, src){ if(!img)return; img.onerror=()=>{img.onerror=null;img.src=defaultAvatarUrl();}; img.src=src||defaultAvatarUrl(); }
         function applyCustomization(){
@@ -862,29 +865,16 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         subNameInput.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); }});
 
 
-        avatarBtn.addEventListener('click', () => fileInput.click());
-        subAvatarBtn.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    profileData.avatar = event.target.result;
-                    avatarImg.src = profileData.avatar;
-                    avatarImg.style.display = 'block';
-                    avatarText.style.display = 'none';
-
-                    subAvatarImg.src = profileData.avatar;
-                    subAvatarImg.style.display = 'block';
-                    subAvatarText.style.display = 'none';
-
-                    setAvatarImage(hudP1Avatar, profileData.avatar);
-                    saveProfile();
-                }
-                reader.readAsDataURL(file);
-            }
-        });
+        function chooseApprovedAvatar(){
+            profileData.avatar=defaultAvatarUrl();
+            [avatarImg,subAvatarImg].forEach(img=>{img.src=profileData.avatar;img.style.display='block';});
+            avatarText.style.display='none'; subAvatarText.style.display='none';
+            setAvatarImage(hudP1Avatar,profileData.avatar); saveProfile();
+        }
+        // Avatar uploads are restricted to the server's approved preset gallery until image-content moderation is available.
+        avatarBtn.addEventListener('click', chooseApprovedAvatar);
+        subAvatarBtn.addEventListener('click', chooseApprovedAvatar);
+        fileInput.addEventListener('change',()=>{fileInput.value='';alert('For player safety, please use an approved avatar from the avatar button.');});
 
         mainPlayBtn.addEventListener('click', () => {
             mainMenu.style.display = 'none';
@@ -1061,11 +1051,11 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         friendsClose.addEventListener('click', () => friendsModal.style.display='none');
         chatClose.addEventListener('click', () => chatModal.style.display='none');
         socket.on('profile_accepted', d=>{
-          if(d?.name){ previousAcceptedName=d.name; profileData.name=d.name; profileData.profileId=d.profileId||profileData.profileId; localStorage.setItem('iceHockeyProfile',JSON.stringify(profileData)); nameInput.value=d.name; subNameInput.value=d.name; hudP1Name.textContent=d.name; pendingNameChange=''; showNameStatus(''); }
+          if(d?.name){ previousAcceptedName=d.name; profileData.name=d.name; profileData.profileId=d.profileId||profileData.profileId; if(d.avatar) profileData.avatar=d.avatar; localStorage.setItem('iceHockeyProfile',JSON.stringify(profileData)); nameInput.value=d.name; subNameInput.value=d.name; hudP1Name.textContent=d.name; if(d.avatar){avatarImg.src=d.avatar;subAvatarImg.src=d.avatar;setAvatarImage(hudP1Avatar,d.avatar);} pendingNameChange=''; showNameStatus(''); }
         });
         socket.on('name_taken', d=>{
-          // Never keep the rejected name. Restore the last server-accepted name.
-          restoreAcceptedName('Username already exists.');
+          // Never keep a rejected or censored name. Restore the last server-accepted name.
+          restoreAcceptedName(d?.message || 'Username already exists.');
           friendStatus.textContent='Username already exists.';
           setTimeout(()=>{ if(friendStatus.textContent==='Username already exists.') friendStatus.textContent=''; },3500);
         });
@@ -1272,7 +1262,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             opponentTarget.y += (ty-opponentTarget.y)*difficulty;
             opponent.x += (opponentTarget.x-opponent.x)*0.42;
             opponent.y += (opponentTarget.y-opponent.y)*0.42;
-            checkSweptCollision(opponent,puck,previousOpponent.x,previousOpponent.y);
+            checkSweptCollision(opponent,puck,puck.x,puck.y);
             // Give the bot an intentional, aimed shot/clear when it reaches the puck, including in corners.
             const contact=opponent.radius+puck.radius+12;
             if(distance<contact && now-botLastShotAt>520){
@@ -1338,9 +1328,9 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             return null;
         }
         function updateBotPuck(){
-            const previousX=puck.x;
+            const previousX=puck.x, previousY=puck.y;
             puck.x+=puck.vx; puck.y+=puck.vy; puck.vx*=0.992; puck.vy*=0.992;
-            checkSweptCollision(player,puck,previousPlayer.x,previousPlayer.y);
+            checkSweptCollision(player,puck,previousX,previousY);
             resolvePuckWalls(previousX);
         }
 
@@ -1571,7 +1561,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
              if(networkNow-lastMoveEmitAt>=33){ socket.volatile.emit('player_move', { room: currentRoom, x: player.x, y: player.y }); lastMoveEmitAt=networkNow; }
 
             if (playerSide === 'left') {
-                const previousX=puck.x;
+                const previousX=puck.x, previousY=puck.y;
                 puck.x += puck.vx;
                 puck.y += puck.vy;
                 puck.vx *= 0.99;
@@ -1583,8 +1573,11 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
                   socket.emit('puck_update', { room: currentRoom, x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy });
                   return;
                 }
-                checkSweptCollision(player,puck,previousPlayer.x,previousPlayer.y);
-                checkSweptCollision(opponent,puck,previousOpponent.x,previousOpponent.y);
+                // Swept collision requires the puck's previous position, not the skater's.
+                // Passing previousPlayer/previousOpponent here made the sweep vector jump to the Host
+                // and repeatedly reposition the puck beside that player.
+                checkSweptCollision(player,puck,previousX,previousY);
+                checkSweptCollision(opponent,puck,previousX,previousY);
                 const puckNow=performance.now();
                 if(puckNow-lastPuckEmitAt>=33){ socket.volatile.emit('puck_update', { room: currentRoom, x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy }); lastPuckEmitAt=puckNow; }
             }
@@ -1635,7 +1628,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             }
             if(Date.now()-lastHitAt>90){lastHitAt=Date.now();playSfx('hit');}
         }
-        function checkCollision(entity,p){checkSweptCollision(entity,p,entity.x,entity.y);}
+        function checkCollision(entity,p){checkSweptCollision(entity,p,p.x,p.y);}
 
         function resetPuck() {
             puck.x = GAME_WIDTH / 2;
