@@ -385,7 +385,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
     <div id="chat-modal" class="modal">
       <div class="modal-content chat-content">
         <button class="close-x" id="chat-close">×</button>
-        <div class="chat-head"><img id="chat-head-avatar" class="chat-head-avatar" src="https://ice-hockey-server.vercel.app/random-id-photo" alt=""><div><h2 id="chat-title">Chat</h2><small id="chat-head-status" style="color:#7197aa">Friend chat</small></div></div>
+        <div class="chat-head"><img id="chat-head-avatar" class="chat-head-avatar" src="https://ice-hockey-server.onrender.com/random-id-photo" alt=""><div><h2 id="chat-title">Chat</h2><small id="chat-head-status" style="color:#7197aa">Friend chat</small></div></div>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-compose-wrap"><div id="chat-attachment-preview"></div>
         <div class="chat-compose">
@@ -458,20 +458,18 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         </div>
     </div>
 
-    <script src="https://ice-hockey-server.vercel.app/socket.io/socket.io.js"></script>
+    <script src="https://ice-hockey-server.onrender.com/socket.io/socket.io.js"></script>
     <script>
         // Single source of truth for the server origin -- used for the socket
         // connection AND for the plain HTTP calls (leaderboard, avatar image)
         // below, which previously used relative URLs and silently hit the
         // client's own domain instead of the server.
-        const SERVER_URL = "https://ice-hockey-server.vercel.app";
+        const SERVER_URL = "https://ice-hockey-server.onrender.com";
         const socket = io(SERVER_URL, {
             path: "/socket.io",
-            // Vercel Functions pin one WebSocket connection to one Function
-            // instance; HTTP long-polling makes separate requests that can
-            // land on different instances and break the handshake. Only
-            // websocket is safe to use against this host.
-            transports: ["websocket"],
+            // Render runs a single long-lived Node process, so websocket-first
+            // with a polling fallback is safe (helps on restrictive networks).
+            transports: ["websocket", "polling"],
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 500,
@@ -1438,6 +1436,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         socket.on('game_ended', data => endGame(data?.reason || 'Time up'));
 
         socket.on('opponent_disconnected', () => {
+            if (matchEnded) return;
             cgGameplayStop();
             alert('Opponent disconnected!');
             location.reload();
@@ -1569,7 +1568,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
 
             if (isBotMatch) { updateBotAI(); updateBotPuck(); return; }
             const networkNow=performance.now();
-             if(networkNow-lastMoveEmitAt>=33){ socket.emit('player_move', { room: currentRoom, x: player.x, y: player.y }); lastMoveEmitAt=networkNow; }
+             if(networkNow-lastMoveEmitAt>=33){ socket.volatile.emit('player_move', { room: currentRoom, x: player.x, y: player.y }); lastMoveEmitAt=networkNow; }
 
             if (playerSide === 'left') {
                 const previousX=puck.x;
@@ -1587,7 +1586,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
                 checkSweptCollision(player,puck,previousPlayer.x,previousPlayer.y);
                 checkSweptCollision(opponent,puck,previousOpponent.x,previousOpponent.y);
                 const puckNow=performance.now();
-                if(puckNow-lastPuckEmitAt>=33){ socket.emit('puck_update', { room: currentRoom, x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy }); lastPuckEmitAt=puckNow; }
+                if(puckNow-lastPuckEmitAt>=33){ socket.volatile.emit('puck_update', { room: currentRoom, x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy }); lastPuckEmitAt=puckNow; }
             }
         }
 
@@ -1690,12 +1689,19 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         }
 
         let gameLoopRunning=false;
+        const PHYSICS_STEP_MS = 1000/60; // physics constants are tuned per 60Hz step
         function gameLoop() {
             if(gameLoopRunning) return;
             gameLoopRunning=true;
+            let accumulator=0; lastFrameAt=0;
             const frame=(timestamp)=>{
               const frameTime=timestamp||performance.now();
-              update(); draw();
+              const dt=lastFrameAt?Math.min(100,frameTime-lastFrameAt):PHYSICS_STEP_MS;
+              accumulator+=dt;
+              let steps=0;
+              while(accumulator>=PHYSICS_STEP_MS && steps<5){ update(); accumulator-=PHYSICS_STEP_MS; steps++; }
+              if(steps>=5) accumulator=0;
+              draw();
               lastFrameAt=frameTime;
               if(inGame) requestAnimationFrame(frame);
               else gameLoopRunning=false;
