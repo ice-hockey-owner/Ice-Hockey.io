@@ -715,7 +715,6 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
           applyHudCustomization(hudP2Avatar,opponentCustomization);
           applyNameStyle(hudP1Name,customization.font);
           applyNameStyle(hudP2Name,opponentCustomization.font);
-          if(typeof saveProfile === 'function' && socket?.connected) socket.emit('set_profile',{...profileData,customization:customizationSnapshot()});
         }
         function renderCustomize(){
           renderCoins();
