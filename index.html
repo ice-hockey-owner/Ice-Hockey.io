@@ -247,6 +247,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
 .customize-cost{grid-column:2;grid-row:2;font-size:10px;margin-top:2px}
 .customize-action{position:static;grid-column:3;grid-row:1 / span 2;border-radius:999px;padding:7px 9px;font-size:8px;min-width:60px}
 .player-preview-circle,.frame-preview-circle{width:54px;height:54px}
+.trail-preview{position:relative;width:100%;height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden}.trail-preview span{display:block;width:22px;height:8px;border-radius:99px;transform:rotate(-24deg);margin-left:-5px}.trail-preview i{width:13px;height:13px;border-radius:50%;background:#eafaff;box-shadow:0 0 0 3px #168bcb}.trail-preview.trail-blue span{background:linear-gradient(90deg,#6be8ff00,#6be8ff,#138cff)}.trail-preview.trail-purple span{background:linear-gradient(90deg,#ef8cff00,#ef8cff,#7b2cff)}.trail-preview.trail-aurora span{background:linear-gradient(90deg,#8dffda00,#8dffda,#24b7ff)}.trail-preview.trail-fire span{background:linear-gradient(90deg,#fff09a00,#fff09a,#ff4d27)}.trail-preview.trail-gold span{background:linear-gradient(90deg,#fff0a600,#fff0a6,#d99a19)}
 .font-color-preview{font-size:30px}
 .customize-ad{max-width:1180px;margin:20px auto 0;padding:14px 17px;border-radius:18px;background:rgba(255,255,255,.84);border:1px solid #d8e9f4;box-shadow:0 10px 28px rgba(38,86,120,.07)}
 .reward-ad-btn{border-radius:999px;padding:11px 16px;box-shadow:0 7px 16px rgba(12,155,115,.18)}
@@ -612,6 +613,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
 
         let profileData = { name: '', avatar: '', profileId: '' };
         let previousAcceptedName = '';
+        let previousAcceptedAvatar = '';
         let pendingNameChange = '';
         let matchProfilesBySide = {left:null,right:null};
         let rewardedAdRemaining = 2;
@@ -826,7 +828,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             ensureProfileId();
             if (!profileData.name || profileData.name === 'Player') profileData.name = generatePlayerName();
             if (!profileData.avatar) profileData.avatar = defaultAvatarUrl();
-            previousAcceptedName = profileData.name;
+            previousAcceptedName = profileData.name; previousAcceptedAvatar=profileData.avatar;
             nameInput.value = profileData.name; subNameInput.value = profileData.name;
             avatarImg.src = profileData.avatar; avatarImg.style.display='block'; avatarText.style.display='none';
             subAvatarImg.src = profileData.avatar; subAvatarImg.style.display='block'; subAvatarText.style.display='none';
@@ -868,16 +870,17 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         subNameInput.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); }});
 
 
-        function chooseApprovedAvatar(){
-            profileData.avatar=defaultAvatarUrl();
-            [avatarImg,subAvatarImg].forEach(img=>{img.src=profileData.avatar;img.style.display='block';});
-            avatarText.style.display='none'; subAvatarText.style.display='none';
-            setAvatarImage(hudP1Avatar,profileData.avatar); saveProfile();
-        }
-        // Avatar uploads are restricted to the server's approved preset gallery until image-content moderation is available.
-        avatarBtn.addEventListener('click', chooseApprovedAvatar);
-        subAvatarBtn.addEventListener('click', chooseApprovedAvatar);
-        fileInput.addEventListener('change',()=>{fileInput.value='';alert('For player safety, please use an approved avatar from the avatar button.');});
+        avatarBtn.addEventListener('click', () => fileInput.click());
+        subAvatarBtn.addEventListener('click', () => fileInput.click());
+        fileInput.accept='image/png,image/jpeg,image/webp';
+        fileInput.addEventListener('change', e=>{
+          const file=e.target.files?.[0]; if(!file)return;
+          if(!['image/png','image/jpeg','image/webp'].includes(file.type)){attachmentPreview.textContent='Avatar must be PNG, JPG, or WebP.';fileInput.value='';return;}
+          if(file.size>1*1024*1024){attachmentPreview.textContent='Avatar must be 1 MB or smaller.';fileInput.value='';return;}
+          const reader=new FileReader();
+          reader.onload=()=>{profileData.avatar=String(reader.result||'');[avatarImg,subAvatarImg].forEach(img=>{img.src=profileData.avatar;img.style.display='block';});avatarText.style.display='none';subAvatarText.style.display='none';setAvatarImage(hudP1Avatar,profileData.avatar);saveProfile();attachmentPreview.textContent='Avatar submitted for safety review…';};
+          reader.readAsDataURL(file);fileInput.value='';
+        });
 
         mainPlayBtn.addEventListener('click', () => {
             mainMenu.style.display = 'none';
@@ -1054,11 +1057,15 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         friendsClose.addEventListener('click', () => friendsModal.style.display='none');
         chatClose.addEventListener('click', () => chatModal.style.display='none');
         socket.on('profile_accepted', d=>{
-          if(d?.name){ previousAcceptedName=d.name; profileData.name=d.name; profileData.profileId=d.profileId||profileData.profileId; if(d.avatar) profileData.avatar=d.avatar; localStorage.setItem('iceHockeyProfile',JSON.stringify(profileData)); nameInput.value=d.name; subNameInput.value=d.name; hudP1Name.textContent=d.name; if(d.avatar){avatarImg.src=d.avatar;subAvatarImg.src=d.avatar;setAvatarImage(hudP1Avatar,d.avatar);} pendingNameChange=''; showNameStatus(''); }
+          if(d?.name){ previousAcceptedName=d.name; profileData.name=d.name; profileData.profileId=d.profileId||profileData.profileId; if(d.avatar){profileData.avatar=d.avatar;previousAcceptedAvatar=d.avatar;} localStorage.setItem('iceHockeyProfile',JSON.stringify(profileData)); nameInput.value=d.name; subNameInput.value=d.name; hudP1Name.textContent=d.name; if(d.avatar){avatarImg.src=d.avatar;subAvatarImg.src=d.avatar;setAvatarImage(hudP1Avatar,d.avatar);} pendingNameChange=''; showNameStatus(''); }
         });
         socket.on('name_taken', d=>{
-          // Never keep a rejected or censored name. Restore the last server-accepted name.
+          // Restore both name and avatar if either failed server moderation.
+          profileData.avatar=previousAcceptedAvatar||defaultAvatarUrl();
+          [avatarImg,subAvatarImg].forEach(img=>{img.src=profileData.avatar;img.style.display='block';});
+          setAvatarImage(hudP1Avatar,profileData.avatar);
           restoreAcceptedName(d?.message || 'Username already exists.');
+          attachmentPreview.textContent=d?.message||'Profile rejected by safety moderation.';
           friendStatus.textContent='Username already exists.';
           setTimeout(()=>{ if(friendStatus.textContent==='Username already exists.') friendStatus.textContent=''; },3500);
         });
@@ -1080,7 +1087,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         chatFile.addEventListener('change', () => {
             const file = chatFile.files[0];
             if (!file) return;
-            if (!/^image\//.test(file.type)) { attachmentPreview.textContent='Only images can be attached; videos and audio are not supported by safety moderation yet.'; chatFile.value=''; return; }
+            if (!['image/png','image/jpeg','image/webp'].includes(file.type)) { attachmentPreview.textContent='Only PNG, JPG, or WebP images can be safety-checked.'; chatFile.value=''; return; }
             if (file.size > 3 * 1024 * 1024) {
                 attachmentPreview.textContent = 'Image must be 3 MB or smaller.';
                 pendingAttachment = null;
