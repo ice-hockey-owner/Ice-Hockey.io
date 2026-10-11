@@ -599,9 +599,11 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const GAME_WIDTH = 1024, GAME_HEIGHT = 640;
-        const RENDER_SCALE = Math.min(1920 / GAME_WIDTH, 1080 / GAME_HEIGHT);
-        const RENDER_OFFSET_X = (1920 - GAME_WIDTH * RENDER_SCALE) / 2;
-        const RENDER_OFFSET_Y = (1080 - GAME_HEIGHT * RENDER_SCALE) / 2;
+        // Render at 1280x720 backing resolution instead of 1920x1080 to reduce GPU fill cost on lower-end clients.
+        canvas.width=1280; canvas.height=720;
+        const RENDER_SCALE = Math.min(canvas.width / GAME_WIDTH, canvas.height / GAME_HEIGHT);
+        const RENDER_OFFSET_X = (canvas.width - GAME_WIDTH * RENDER_SCALE) / 2;
+        const RENDER_OFFSET_Y = (canvas.height - GAME_HEIGHT * RENDER_SCALE) / 2;
         canvas.style.touchAction='none';
         async function requestLandscapeLock(){
             try { if(screen.orientation?.lock) await screen.orientation.lock('landscape'); } catch (_) {}
@@ -673,16 +675,17 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         const CUSTOM_ITEMS={
           frame:[['Classic',0,'frame-classic'],['Ice Glow',30,'frame-ice'],['Ruby',50,'frame-ruby'],['Gold',80,'frame-gold'],['Neon',110,'frame-neon'],['Aurora',140,'frame-aurora'],['Frost',170,'frame-frost'],['Cosmic',210,'frame-cosmic']],
           player:[['Blue',0,'player-blue'],['Red',0,'player-red'],['Violet',50,'player-violet'],['Mint',80,'player-mint'],['Gold',110,'player-gold']],
-          font:[['Ocean',0,'font-ocean'],['Royal',30,'font-royal'],['Tropical',50,'font-tropical'],['Sunset',80,'font-sunset'],['Aqua',110,'font-aqua'],['Aurora',140,'font-aurora'],['Candy',170,'font-candy'],['Icefire',210,'font-icefire']]
+          font:[['Ocean',0,'font-ocean'],['Royal',30,'font-royal'],['Tropical',50,'font-tropical'],['Sunset',80,'font-sunset'],['Aqua',110,'font-aqua'],['Aurora',140,'font-aurora'],['Candy',170,'font-candy'],['Icefire',210,'font-icefire']],
+          trail:[['Ice Blue',0,'trail-blue'],['Neon Purple',60,'trail-purple'],['Aurora',90,'trail-aurora'],['Fire',120,'trail-fire'],['Gold Rush',150,'trail-gold']]
         };
         let wallet=Number(localStorage.getItem('iceHockeyCoins')||0);
-        let customization=(()=>{const d={frame:'frame-classic',player:'player-blue',font:'font-ocean',owned:{frame:['frame-classic'],player:['player-blue','player-red'],font:['font-ocean']}};try{const x=JSON.parse(localStorage.getItem('iceHockeyCustomization')||'null');if(x){d.frame=x.frame||d.frame;d.player=x.player||d.player;d.font=(x.font&&x.font.startsWith('font-'))?x.font:d.font;d.owned={...d.owned,...(x.owned||{})};Object.keys(CUSTOM_ITEMS).forEach(k=>{d.owned[k]=Array.isArray(d.owned[k])?d.owned[k].filter(id=>CUSTOM_ITEMS[k].some(i=>i[2]===id)):[];});if(!d.owned.frame.includes(d.frame))d.frame='frame-classic';if(!d.owned.player.includes(d.player))d.player='player-blue';if(!d.owned.font.includes(d.font))d.font='font-ocean';}return d}catch(e){return d}})();
+        let customization=(()=>{const d={frame:'frame-classic',player:'player-blue',font:'font-ocean',trail:'trail-blue',owned:{frame:['frame-classic'],player:['player-blue','player-red'],font:['font-ocean'],trail:['trail-blue']}};try{const x=JSON.parse(localStorage.getItem('iceHockeyCustomization')||'null');if(x){d.frame=x.frame||d.frame;d.player=x.player||d.player;d.font=(x.font&&x.font.startsWith('font-'))?x.font:d.font;d.owned={...d.owned,...(x.owned||{})};Object.keys(CUSTOM_ITEMS).forEach(k=>{d.owned[k]=Array.isArray(d.owned[k])?d.owned[k].filter(id=>CUSTOM_ITEMS[k].some(i=>i[2]===id)):[];});if(!d.owned.frame.includes(d.frame))d.frame='frame-classic';if(!d.owned.player.includes(d.player))d.player='player-blue';if(!d.owned.font.includes(d.font))d.font='font-ocean';d.owned.trail=Array.isArray(d.owned.trail)?d.owned.trail.filter(id=>CUSTOM_ITEMS.trail.some(i=>i[2]===id)):['trail-blue'];if(!d.owned.trail.includes(d.trail))d.trail='trail-blue';}return d}catch(e){return d}})();
         let pendingMatchCoins=0; let lastHitAt=0;
         let opponentCustomization={frame:'frame-classic',player:'player-red',font:'font-ocean'};
         function saveCustomization(){localStorage.setItem('iceHockeyCoins',String(wallet));localStorage.setItem('iceHockeyCustomization',JSON.stringify(customization));renderCoins();applyCustomization();}
         function renderCoins(){menuCoins.textContent=wallet;customizeCoins.textContent=wallet;}
         function fontGradient(id){ return ({'font-ocean':'linear-gradient(90deg,#1769e8,#12b6ff)','font-royal':'linear-gradient(90deg,#7b2cff,#ff3dbb)','font-tropical':'linear-gradient(90deg,#00a878,#ffd33d)','font-sunset':'linear-gradient(90deg,#ff5c5c,#ff9f43)','font-aqua':'linear-gradient(90deg,#0f766e,#06b6d4)','font-aurora':'linear-gradient(90deg,#00C9FF,#92FE9D,#FF94B4,#3A29FF)','font-candy':'linear-gradient(90deg,#FF75B5,#B575FF,#75E6FF,#FFE475)','font-icefire':'linear-gradient(90deg,#00467F,#00F2FE,#FF9000,#FF416C)'}[id]||'linear-gradient(90deg,#1769e8,#12b6ff)'); }
-        function customizationSnapshot(){ return {frame:customization.frame,player:customization.player,font:customization.font}; }
+        function customizationSnapshot(){ return {frame:customization.frame,player:customization.player,font:customization.font,trail:customization.trail||'trail-blue'}; }
         function profilePayload(){ ensureProfileId(); return {...profileData, customization:customizationSnapshot()}; }
         function applyNameStyle(el, fontId){ if(!el)return; el.style.fontFamily='"Baloo 2",system-ui,sans-serif'; el.style.fontWeight='800'; el.style.backgroundImage=fontGradient(fontId); el.style.webkitBackgroundClip='text'; el.style.backgroundClip='text'; el.style.color='transparent'; }
         function applyHudCustomization(el, c){ if(!el)return; const f=frameStyle(c?.frame||'frame-classic'); el.style.border='2px solid '+f.stroke; el.style.boxShadow='0 0 12px '+f.glow; el.style.borderRadius='50%'; }
@@ -699,8 +702,8 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         function renderCustomize(){
           renderCoins();
           const avatar=String(profileData.avatar||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-          const cats=[['frame','Frame'],['player','Player'],['font','User Font Color']];
-          customizeGrid.innerHTML=cats.map(([key,label])=>`<section class="customize-category"><h3>${label}</h3><div class="customize-items">${CUSTOM_ITEMS[key].map(([name,cost,id])=>{const owned=customization.owned[key]?.includes(id);const selected=customization[key]===id;let preview='';if(key==='frame') preview=`<div class="frame-preview-circle ${id}">${avatar?`<img src="${avatar}" alt="">`:'<span>●</span>'}</div>`;else if(key==='player') preview=`<div class="player-preview-circle ${id}">●</div>`;else preview=`<div class="font-color-preview ${id}">Aa</div>`;return `<button class="customize-item ${selected?'selected':''}" data-cat="${key}" data-id="${id}" data-cost="${cost}"><div class="customize-preview">${preview}</div><div class="customize-name">${name}</div><div class="customize-cost">${owned?'Owned':cost===0?'Free':cost+' coins'}</div><span class="customize-action ${owned?'owned':''}">${selected?'EQUIPPED':owned?'EQUIP':cost===0?'GET':'BUY'}</span></button>`}).join('')}</div></section>`).join('');
+          const cats=[['frame','Frame'],['player','Player'],['font','User Font Color'],['trail','Trails']];
+          customizeGrid.innerHTML=cats.map(([key,label])=>`<section class="customize-category"><h3>${label}</h3><div class="customize-items">${CUSTOM_ITEMS[key].map(([name,cost,id])=>{const owned=customization.owned[key]?.includes(id);const selected=customization[key]===id;let preview='';if(key==='frame') preview=`<div class="frame-preview-circle ${id}">${avatar?`<img src="${avatar}" alt="">`:'<span>●</span>'}</div>`;else if(key==='player') preview=`<div class="player-preview-circle ${id}">●</div>`;else if(key==='font') preview=`<div class="font-color-preview ${id}">Aa</div>`;else preview=`<div class="trail-preview ${id}"><span></span><span></span><span></span><i></i></div>`;return `<button class="customize-item ${selected?'selected':''}" data-cat="${key}" data-id="${id}" data-cost="${cost}"><div class="customize-preview">${preview}</div><div class="customize-name">${name}</div><div class="customize-cost">${owned?'Owned':cost===0?'Free':cost+' coins'}</div><span class="customize-action ${owned?'owned':''}">${selected?'EQUIPPED':owned?'EQUIP':cost===0?'GET':'BUY'}</span></button>`}).join('')}</div></section>`).join('');
           customizeGrid.querySelectorAll('.customize-item').forEach(btn=>btn.addEventListener('click',()=>{
             const cat=btn.dataset.cat,id=btn.dataset.id,cost=Number(btn.dataset.cost);
             customization.owned[cat] ||= [];
@@ -1077,9 +1080,9 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
         chatFile.addEventListener('change', () => {
             const file = chatFile.files[0];
             if (!file) return;
-            if (!/^(image|video|audio)\//.test(file.type)) return;
-            if (file.size > 5 * 1024 * 1024) {
-                attachmentPreview.textContent = 'Attachment must be 5 MB or smaller.';
+            if (!/^image\//.test(file.type)) { attachmentPreview.textContent='Only images can be attached; videos and audio are not supported by safety moderation yet.'; chatFile.value=''; return; }
+            if (file.size > 3 * 1024 * 1024) {
+                attachmentPreview.textContent = 'Image must be 3 MB or smaller.';
                 pendingAttachment = null;
                 return;
             }
@@ -1385,6 +1388,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             opponent.y = 320; opponentTarget={x:opponent.x,y:opponent.y}; previousOpponent={x:opponent.x,y:opponent.y}; previousPlayer={x:player.x,y:player.y};
             puck.x = 512;
             puck.y = 320;
+            playerTrailPoints.length=0; opponentTrailPoints.length=0;
             puck.vx = 0; puck.vy = 0;
 
             inGame = true;
@@ -1527,6 +1531,7 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             previousPlayer={x:player.x,y:player.y}; previousOpponent={x:opponent.x,y:opponent.y};
             if (pointerTarget) { const ease = 0.34; player.x += (pointerTarget.x-player.x)*ease; player.y += (pointerTarget.y-player.y)*ease; }
             opponent.x += (opponentTarget.x-opponent.x)*0.62; opponent.y += (opponentTarget.y-opponent.y)*0.62;
+            recordTrail(playerTrailPoints,player); recordTrail(opponentTrailPoints,opponent);
             // The left-side client is the puck authority. Smooth incoming snapshots on
             // the right-side client instead of snapping the puck to every network packet.
             if (!isBotMatch && playerSide === 'right' && lastPuckPacketAt) {
@@ -1637,16 +1642,30 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             puck.vy = 0;
         }
 
-        function sanitizeCustomization(c){ const frames=CUSTOM_ITEMS.frame.map(x=>x[2]),players=CUSTOM_ITEMS.player.map(x=>x[2]),fonts=CUSTOM_ITEMS.font.map(x=>x[2]); return {frame:frames.includes(c?.frame)?c.frame:'frame-classic',player:players.includes(c?.player)?c.player:'player-blue',font:fonts.includes(c?.font)?c.font:'font-ocean'}; }
+        function sanitizeCustomization(c){ const frames=CUSTOM_ITEMS.frame.map(x=>x[2]),players=CUSTOM_ITEMS.player.map(x=>x[2]),fonts=CUSTOM_ITEMS.font.map(x=>x[2]),trails=CUSTOM_ITEMS.trail.map(x=>x[2]); return {frame:frames.includes(c?.frame)?c.frame:'frame-classic',player:players.includes(c?.player)?c.player:'player-blue',font:fonts.includes(c?.font)?c.font:'font-ocean',trail:trails.includes(c?.trail)?c.trail:'trail-blue'}; }
         function selectedPlayerColorFor(id){ const map={'player-blue':'#0284c7','player-red':'#ef4444','player-violet':'#7957d8','player-mint':'#23bda0','player-gold':'#d6a62c'}; return map[id]||map['player-blue']; }
         function selectedPlayerColor(){ return selectedPlayerColorFor(customization.player); }
         function frameStyle(id){return ({'frame-classic':{stroke:'#7dcbea',glow:'rgba(125,203,234,.35)'},'frame-ice':{stroke:'#18c8ff',glow:'rgba(24,200,255,.65)'},'frame-ruby':{stroke:'#ef476f',glow:'rgba(239,71,111,.5)'},'frame-gold':{stroke:'#e8b63f',glow:'rgba(232,182,63,.52)'},'frame-neon':{stroke:'#9b6cff',glow:'rgba(155,108,255,.7)'},'frame-aurora':{stroke:'#35e0b0',glow:'rgba(53,224,176,.62)'},'frame-frost':{stroke:'#b9e9ff',glow:'rgba(185,233,255,.72)'},'frame-cosmic':{stroke:'#d66cff',glow:'rgba(214,108,255,.72)'}}[id]||{stroke:'#7dcbea',glow:'rgba(125,203,234,.35)'});}
         function drawFramedPlayer(x,y,r,fill,frameId){const f=frameStyle(frameId);ctx.save();ctx.shadowColor=f.glow;ctx.shadowBlur=frameId==='frame-classic'?7:16;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=4;ctx.strokeStyle=f.stroke;ctx.stroke();ctx.restore();}
+        const playerTrailPoints=[]; const opponentTrailPoints=[];
+        const TRAIL_STYLES={'trail-blue':['#6be8ff','#138cff'],'trail-purple':['#ef8cff','#7b2cff'],'trail-aurora':['#8dffda','#24b7ff'],'trail-fire':['#fff09a','#ff4d27'],'trail-gold':['#fff0a6','#d99a19']};
+        function recordTrail(points, entity){
+          const last=points[points.length-1];
+          if(!last || Math.hypot(entity.x-last.x,entity.y-last.y)>=2.5){points.push({x:entity.x,y:entity.y});if(points.length>22)points.shift();}
+        }
+        function drawTrail(points, trailId){
+          if(points.length<2)return;
+          const colors=TRAIL_STYLES[trailId]||TRAIL_STYLES['trail-blue'];
+          ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=15;
+          ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
+          const first=points[0],last=points[points.length-1];const grad=ctx.createLinearGradient(first.x,first.y,last.x,last.y);
+          grad.addColorStop(0,colors[0]+'00');grad.addColorStop(.55,colors[0]+'55');grad.addColorStop(1,colors[1]+'cc');ctx.strokeStyle=grad;ctx.stroke();ctx.restore();
+        }
         function draw() {
             ctx.setTransform(1,0,0,1,0,0);
-            ctx.clearRect(0, 0, 1920, 1080);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#071321';
-            ctx.fillRect(0, 0, 1920, 1080);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.setTransform(RENDER_SCALE,0,0,RENDER_SCALE,RENDER_OFFSET_X,RENDER_OFFSET_Y);
 
             ctx.fillStyle = '#f0f9ff';
@@ -1676,6 +1695,8 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             const localCosmetics = sanitizeCustomization((matchProfilesBySide[playerSide]?.customization) || customizationSnapshot());
             const opponentSide = playerSide==='left' ? 'right' : 'left';
             const remoteCosmetics = sanitizeCustomization((matchProfilesBySide[opponentSide]?.customization) || opponentCustomization);
+            drawTrail(playerTrailPoints,localCosmetics.trail);
+            drawTrail(opponentTrailPoints,remoteCosmetics.trail);
             drawFramedPlayer(player.x,player.y,player.radius,selectedPlayerColorFor(localCosmetics.player),localCosmetics.frame);
             drawFramedPlayer(opponent.x,opponent.y,opponent.radius,selectedPlayerColorFor(remoteCosmetics.player),remoteCosmetics.frame);
 
