@@ -1543,9 +1543,10 @@ body[data-player="player-violet"] .customize-preview.player-violet{background:#7
             if (!isBotMatch && playerSide === 'right' && lastPuckPacketAt) {
               const now=performance.now();
               const age=Math.max(0,now-lastPuckPacketAt);
-              const extrapolate=Math.min(age,45)/1000;
-              const tx=remotePuckTarget.x+remotePuckTarget.vx*extrapolate;
-              const ty=remotePuckTarget.y+remotePuckTarget.vy*extrapolate;
+              // Physics velocity is measured in units per frame, not units per second.
+              const extrapolateFrames=Math.min(age,45)*0.06;
+              const tx=remotePuckTarget.x+remotePuckTarget.vx*extrapolateFrames;
+              const ty=remotePuckTarget.y+remotePuckTarget.vy*extrapolateFrames;
               const frameMs=lastFrameAt?Math.min(50,Math.max(0,now-lastFrameAt)):16.7;
               const blend=1-Math.exp(-frameMs/38);
               puck.x+=(tx-puck.x)*blend; puck.y+=(ty-puck.y)*blend;
