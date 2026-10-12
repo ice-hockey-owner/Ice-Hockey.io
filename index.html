@@ -1274,6 +1274,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 
         loadProfile();
         window.__iceProfileLoaded = !!(profileData && profileData.profileId);
+        window.__iceSocketReady = !!socket.connected;
         socket.on('connect', () => { window.__iceSocketReady = true; if(window.__iceLoadingUpdate) window.__iceLoadingUpdate(); });
         socket.on('disconnect', () => { window.__iceSocketReady = false; });
         renderMenuStats(getLocalStats(profileData.name));
