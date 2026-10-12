@@ -331,9 +331,40 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
   .font-color-preview,.hud-name,.opponent-hud .hud-name,.stats-name,.customize-preview.font-georgia{animation:none}
 }
 
+
+/* Ice Hockey.io first-load screen */
+#ice-loading-screen{position:fixed;inset:0;z-index:20000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2vh;padding:2vh 1.4vw 2.2vh;background:#f1f7ff;color:#05080c;transition:opacity .35s ease,visibility .35s ease}
+#ice-loading-screen.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.ice-loading-logo{display:block;width:min(42vw,680px);height:min(47vh,420px);object-fit:contain;margin-top:0}
+.ice-loading-tip-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2vh;flex:1;width:min(92vw,900px);min-height:0;text-align:center}
+.ice-loading-heading{font-size:clamp(24px,3.5vw,48px);line-height:1.1}
+#ice-loading-tip{appearance:none;border:0;background:transparent;color:#071321;font:inherit;font-size:clamp(16px,2vw,28px);line-height:1.25;max-width:100%;padding:14px 20px;cursor:pointer;touch-action:manipulation}
+.ice-loading-tip-hint{font:800 clamp(10px,1vw,14px)/1 system-ui,sans-serif;letter-spacing:2px;color:#0877a8;opacity:.85}
+.ice-loading-tip-hint span{display:inline-block;margin-left:5px;font-size:1.3em}
+.ice-loading-progress{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;width:100%;height:clamp(44px,8vh,76px);min-height:42px;border:clamp(4px,.55vw,7px) solid #05080c;border-radius:22px;background:#dceaf4}
+#ice-loading-progress-fill{position:absolute;inset:0 auto 0 0;width:0%;background:#83f7f3;transition:width .22s ease}
+#ice-loading-progress-label{position:relative;z-index:1;font-size:clamp(20px,3vw,42px);line-height:1;color:#05080c}
+@media(max-height:560px){#ice-loading-screen{padding:1vh 1.4vw 1.4vh;gap:1vh}.ice-loading-logo{width:min(35vw,480px);height:36vh}.ice-loading-tip-wrap{gap:.5vh}.ice-loading-heading{font-size:clamp(20px,3vh,30px)}#ice-loading-tip{font-size:clamp(14px,2.4vh,21px);padding:4px 10px}.ice-loading-progress{height:9vh;min-height:34px}}
+@media(max-width:600px) and (orientation:portrait){.ice-loading-logo{width:min(78vw,420px);height:36vh}.ice-loading-tip-wrap{width:94vw}}
+@media(prefers-reduced-motion:reduce){#ice-loading-screen,#ice-loading-progress-fill{transition:none}}
+
 </style>
 </head>
 <body>
+
+        <!-- Initial loading screen: stays up until local profile identity and server connection are ready. -->
+        <div id="ice-loading-screen" role="status" aria-live="polite">
+          <img class="ice-loading-logo" src="assets/images/Logo.png" alt="Ice Hockey.io">
+          <div class="ice-loading-tip-wrap">
+            <div class="ice-loading-heading">Tips</div>
+            <button id="ice-loading-tip" type="button" aria-label="Tap to show the next gameplay tip">Keep your eyes on the puck!</button>
+            <div class="ice-loading-tip-hint">TAP FOR NEXT TIP <span>↻</span></div>
+          </div>
+          <div class="ice-loading-progress">
+            <div id="ice-loading-progress-fill"></div>
+            <span id="ice-loading-progress-label">Loading 0%</span>
+          </div>
+        </div>
 
     <div id="game-container">
         <div id="landscape-overlay" aria-live="polite"><div class="landscape-card"><div class="landscape-icon">↻</div><strong>ROTATE YOUR PHONE</strong><span>Ice Hockey is designed for landscape play.</span></div></div>
@@ -1242,6 +1273,9 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         socket.on('stats_updated', d => { if(String(d.name||'').toLowerCase()===String(profileData.name||'').toLowerCase()) { saveLocalStats(profileData.name,d.stats); renderMenuStats(d.stats); } });
 
         loadProfile();
+        window.__iceProfileLoaded = !!(profileData && profileData.profileId);
+        socket.on('connect', () => { window.__iceSocketReady = true; if(window.__iceLoadingUpdate) window.__iceLoadingUpdate(); });
+        socket.on('disconnect', () => { window.__iceSocketReady = false; });
         renderMenuStats(getLocalStats(profileData.name));
         // Game State
         let inGame = false;
@@ -1820,5 +1854,59 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
     socket.on('rematch_started', data => { challengeToast.style.display='none'; document.getElementById('rematch-btn').disabled=false; document.getElementById('rematch-btn').classList.remove('waiting'); document.getElementById('rematch-btn').textContent='REMATCH'; });
     window.addEventListener('beforeunload', () => cgGameplayStop());
     </script>
+
+<script>
+(function(){
+  const screen=document.getElementById('ice-loading-screen');
+  const fill=document.getElementById('ice-loading-progress-fill');
+  const label=document.getElementById('ice-loading-progress-label');
+  const tipButton=document.getElementById('ice-loading-tip');
+  const tips=[
+    'Keep your eyes on the puck!',
+    'Pass quickly when a teammate is open.',
+    'Aim your shots away from the goalie.',
+    'Use the boards to keep the puck moving.',
+    'Defence wins close matches.',
+    'Do not chase the puck in a straight line.',
+    'Watch your opponent before committing.',
+    'A quick pass can beat a strong defender.',
+    'Keep moving to make yourself harder to hit.',
+    'Shoot when you have a clear lane.',
+    'Protect the puck near the corners.',
+    'Stay between your opponent and your goal.',
+    'A well-timed turn can create space.',
+    'Look for rebounds after a blocked shot.',
+    'Avoid crowding your own goalie.',
+    'Change direction to surprise your opponent.',
+    'Use open ice instead of skating into traffic.',
+    'Recover quickly after losing the puck.',
+    'Teamwork creates better scoring chances.',
+    'Have fun and play fair!'
+  ];
+  let tipIndex=Math.floor(Math.random()*tips.length), progress=0, ready=false, start=Date.now();
+  function showTip(){tipButton.textContent=tips[tipIndex];}
+  tipButton.addEventListener('click',function(){tipIndex=(tipIndex+1)%tips.length;showTip();});
+  showTip();
+  function update(){
+    const profile=(()=>{try{return JSON.parse(localStorage.getItem('iceHockeyProfile')||'null')}catch(e){return null}})();
+    const hasId=!!(profile&&profile.profileId);
+    const profileLoaded=window.__iceProfileLoaded===true;
+    const serverReady=window.__iceSocketReady===true;
+    ready=hasId&&profileLoaded&&serverReady;
+    if(ready) progress=100;
+    else progress=Math.min(94,Math.max(progress,Math.floor((Date.now()-start)/180)));
+    fill.style.width=progress+'%';
+    label.textContent='Loading '+progress+'%';
+    if(ready){
+      setTimeout(()=>{screen.classList.add('is-hidden');setTimeout(()=>screen.remove(),450);},220);
+      return;
+    }
+    setTimeout(update,120);
+  }
+  window.__iceLoadingUpdate=update;
+  update();
+})();
+</script>
+
 </body>
 </html>
