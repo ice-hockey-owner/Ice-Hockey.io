@@ -280,7 +280,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 .font-color-preview,.hud-name,.opponent-hud .hud-name,.stats-name,.customize-preview.font-georgia{
   background-size:300% 100%!important;
   background-position:0% 50%;
-  animation:iceFontGradientSweep 3.2s ease-in-out infinite;
+  animation:iceFontGradientSweep 1.7s ease-in-out infinite;
   will-change:background-position;
 }
 @keyframes iceFontGradientSweep{
@@ -1893,6 +1893,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
     'Have fun and play fair!'
   ];
   let tipIndex=Math.floor(Math.random()*tips.length), progress=0, ready=false, start=Date.now();
+  const MAX_WAIT_MS=12000;
   function showTip(){tipButton.textContent=tips[tipIndex];}
   tipButton.addEventListener('click',function(){tipIndex=(tipIndex+1)%tips.length;showTip();});
   showTip();
@@ -1901,12 +1902,14 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
     const hasId=!!(profile&&profile.profileId);
     const profileLoaded=window.__iceProfileLoaded===true;
     const serverReady=window.__iceSocketReady===true;
-    ready=hasId&&profileLoaded&&serverReady;
+    ready=(hasId&&profileLoaded&&(serverReady||Date.now()-start>=MAX_WAIT_MS)) || Date.now()-start>=MAX_WAIT_MS;
     if(ready) progress=100;
     else progress=Math.min(94,Math.max(progress,Math.floor((Date.now()-start)/180)));
     fill.style.width=progress+'%';
-    label.textContent='Loading '+progress+'%';
+    if(label) label.textContent='Loading '+progress+'%';
     if(ready){
+      fill.style.width='100%';
+      if(label) label.textContent='';
       setTimeout(()=>{screen.classList.add('is-hidden');setTimeout(()=>screen.remove(),450);},220);
       return;
     }
