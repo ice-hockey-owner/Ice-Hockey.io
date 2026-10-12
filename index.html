@@ -334,6 +334,14 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 
 /* Ice Hockey.io first-load screen */
 #ice-loading-screen{position:fixed;inset:0;z-index:20000;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:2vh;padding:2vh 1.4vw 2.2vh;background:#f1f7ff;color:#05080c;transition:opacity .35s ease,visibility .35s ease}
+#ice-loading-progress-label{display:none!important}
+.ice-loading-heading{font-size:clamp(18px,2.1vw,27px)!important;font-weight:800}
+#ice-loading-tip{font-size:clamp(13px,1.25vw,18px)!important}
+.ice-loading-logo{width:min(46vw,720px);height:min(45vh,400px)}
+.game-title-logo{display:block;width:min(56vw,620px);height:auto;max-height:24vh;object-fit:contain;margin:0 auto}
+.game-title:has(.game-title-logo){width:100%;font-size:0;line-height:0;top:8vh}
+@media(max-width:800px){.game-title-logo{width:min(78vw,520px);max-height:19vh}}
+
 #ice-loading-screen.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 .ice-loading-logo{display:block;width:min(42vw,680px);height:min(47vh,420px);object-fit:contain;margin-top:0}
 .ice-loading-tip-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2vh;flex:1;width:min(92vw,900px);min-height:0;text-align:center}
@@ -354,7 +362,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 
         <!-- Initial loading screen: stays up until local profile identity and server connection are ready. -->
         <div id="ice-loading-screen" role="status" aria-live="polite">
-          <img class="ice-loading-logo" src="assets/images/Logo.png" alt="Ice Hockey.io">
+          <img class="ice-loading-logo" src="assets/images/Logo.svg" alt="Ice Hockey.io">
           <div class="ice-loading-tip-wrap">
             <div class="ice-loading-heading">Tips</div>
             <button id="ice-loading-tip" type="button" aria-label="Tap to show the next gameplay tip">Keep your eyes on the puck!</button>
@@ -362,7 +370,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
           </div>
           <div class="ice-loading-progress">
             <div id="ice-loading-progress-fill"></div>
-            <span id="ice-loading-progress-label">Loading 0%</span>
+            
           </div>
         </div>
 
@@ -394,7 +402,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
   </div>
 </div>
 
-<h1 class="game-title">Ice Hockey</h1>
+<h1 class="game-title"><img class="game-title-logo" src="assets/images/Logo.svg" alt="Ice Hockey.io"></h1>
 
             <button class="menu-btn" id="main-play-btn">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"></polygon></svg>
@@ -403,7 +411,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             <button class="menu-btn" id="friends-btn" style="background:#7c3aed;">FRIENDS<span id="friends-main-badge" class="friends-main-badge">0</span></button>
             <button class="menu-btn leaderboard-menu-btn" id="leaderboard-btn">GLOBAL LEADERBOARDS</button>
             <button class="menu-btn customize-menu-btn" id="customize-btn">CUSTOMIZE</button>
-            <div class="coins-pill" id="menu-coins-pill"><img class="coin-image" src="assets/images/Coin.png" alt="Coin"><span id="menu-coins">0</span><span>COINS</span></div><div class="menu-utility-cluster"><button class="menu-settings-btn" id="menu-settings-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.7 2.9h4.6l.7 2.1c.6.2 1.2.5 1.7 1l2.1-.7 2.3 4-1.7 1.4c.1.3.1.7.1 1.1s0 .8-.1 1.1l1.7 1.4-2.3 4-2.1-.7c-.5.4-1.1.8-1.7 1l-.7 2.1H9.7L9 17.7c-.6-.2-1.2-.5-1.7-1l-2.1.7-2.3-4 1.7-1.4c-.1-.3-.1-.7-.1-1.1s0-.8.1-1.1L2.9 9.3l2.3-4 2.1.7 2.4-.7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg></button><img class="menu-logo" src="assets/images/Logo.png" alt="Ice Hockey logo"></div>
+            <div class="coins-pill" id="menu-coins-pill"><img class="coin-image" src="assets/images/Coin.png" alt="Coin"><span id="menu-coins">0</span><span>COINS</span></div><div class="menu-utility-cluster"><button class="menu-settings-btn" id="menu-settings-btn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9.7 2.9h4.6l.7 2.1c.6.2 1.2.5 1.7 1l2.1-.7 2.3 4-1.7 1.4c.1.3.1.7.1 1.1s0 .8-.1 1.1l1.7 1.4-2.3 4-2.1-.7c-.5.4-1.1.8-1.7 1l-.7 2.1H9.7L9 17.7c-.6-.2-1.2-.5-1.7-1l-2.1.7-2.3-4 1.7-1.4c-.1-.3-.1-.7-.1-1.1s0-.8.1-1.1L2.9 9.3l2.3-4 2.1.7 2.4-.7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11.5" r="3" stroke="currentColor" stroke-width="1.8"/></svg></button><img class="menu-logo" src="assets/images/Company.png" alt="One Touch LLC"></div>
         </div>
 
         <!-- Play Submenu (Quick Match, Create, Join) -->
