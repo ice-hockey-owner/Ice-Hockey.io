@@ -976,8 +976,8 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
                 adViewed=true;
                 // The server must validate the claim and daily limit before crediting coins.
                 if(socket.connected){
-                  socket.emit('rewarded_ad_claim', {reward:50}, result=>{
-                    if(result?.ok){
+                  socket.emit('claim_rewarded_ad', {reward:50}, result=>{
+                    if(result?.granted){
                       if(result.wallet) applyWalletState(result.wallet);
                       rewardedAdRemaining=Math.max(0,Number(result.remaining ?? rewardedAdRemaining-1));
                       renderRewardAdButton();
