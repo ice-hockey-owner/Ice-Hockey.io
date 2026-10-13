@@ -869,14 +869,18 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         }
         // Basic Launch has no ad breaks. Keep call sites safe without interrupting online gameplay.
         async function platformCommercialBreak(resumeGameplay=false){
+          // Kept as a safe no-op for kickoff; interstitials are requested only on menu/rematch actions.
           if(resumeGameplay) cgGameplayStop();
+          await Promise.resolve();
+          if(resumeGameplay && inGame && !matchEnded) cgGameplayStart();
+        }
+        async function showGamePixInterstitial(){
           try {
-            gamePixReady();
-            if(typeof window.GamePix?.interstitialAd==='function'){
-              await window.GamePix.interstitialAd();
-            }
+            await withPlatformPause(async()=>{
+              gamePixReady();
+              if(typeof window.GamePix?.interstitialAd==='function') await window.GamePix.interstitialAd();
+            },true);
           } catch(e) { console.warn('GamePix interstitial ad unavailable:',e); }
-          finally { if(resumeGameplay && inGame && !matchEnded) cgGameplayStart(); }
         }
         document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(inGame&&!matchEnded) cgGameplayStop(); pauseAllGameAudio(); } else if(inGame&&!matchEnded){ cgGameplayStart(); if(audioUnlocked) playAudience(); } });
         document.addEventListener('pointerdown',unlockAudio,{once:true,passive:true});
@@ -1997,13 +2001,14 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             };
             requestAnimationFrame(frame);
         }
-    document.getElementById('game-over-menu').addEventListener('click', () => { botSearchActive=false; clearTimeout(botFallbackTimer); gameOver.style.display='none'; location.reload(); });
+    document.getElementById('game-over-menu').addEventListener('click', async () => { botSearchActive=false; clearTimeout(botFallbackTimer); await showGamePixInterstitial(); gameOver.style.display='none'; location.reload(); });
     document.getElementById('play-again-btn').addEventListener('click', () => {
       gameOver.style.display='none'; matchEnded=false; isBotMatch=false; playSubmenu.style.display='none'; matchmakingScreen.style.display='flex';
       const matchProfile = profilePayload(); socket.emit('set_profile', matchProfile); socket.emit('find_match', {profile: matchProfile}); botSearchActive=true; clearTimeout(botFallbackTimer); botFallbackTimer=setTimeout(()=>{if(botSearchActive&&!inGame&&!matchEnded&&socket.connected)startBotMatch();else if(botSearchActive&&!socket.connected){const mt=document.getElementById('matchmaking-text');if(mt)mt.textContent='Server connection failed — reconnecting…';}},15000);
     });
-    document.getElementById('rematch-btn').addEventListener('click', () => {
+    document.getElementById('rematch-btn').addEventListener('click', async () => {
       if(!lastOpponentName) return;
+      await showGamePixInterstitial();
       socket.emit('rematch_challenge', {name:lastOpponentName});
       document.getElementById('rematch-btn').textContent='WAITING…';
       document.getElementById('rematch-btn').classList.add('waiting');
