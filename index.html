@@ -825,7 +825,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             return SERVER_URL + '/random-id-photo?t=' + Date.now();
         }
         // Y8 SDK integration. Paste the App ID from Y8 Developer Portal > SDK Initialization.
-        const Y8_APP_ID = 'YOUR_Y8_APP_ID';
+        const Y8_APP_ID = '6ace3971dede9cc347adb5b7';
         let y8Sdk = null;
         let y8SdkReady = false;
         let cgGameplayActive = false; // Kept as the game's internal match-lifecycle flag.
@@ -834,13 +834,18 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         window.addEventListener('y8sdk.ready', function(){
           try {
             y8Sdk = window.y8.sdk();
-            y8Sdk.init({ appId: Y8_APP_ID, autoLogin: true });
+            y8Sdk.init({ appId: Y8_APP_ID, autoLogin: true }, {
+              gameId: '287525',
+              preloadAdBreaks: 'on',
+              sound: 'on',
+              onReady: () => console.info('Y8 ads ready')
+            });
             y8SdkReady = true;
             y8Sdk.onAuth((user, error) => {
               if (error) { console.warn('Y8 authentication unavailable; continuing as guest.', error); return; }
               if (user && user.nickname) console.info('Y8 player:', user.nickname);
             });
-            if (Y8_APP_ID === 'YOUR_Y8_APP_ID') console.warn('Set Y8_APP_ID before uploading this build.');
+            
           } catch(e) { console.warn('Y8 SDK initialization failed; game will continue without account features.', e); }
         }, { once: true });
         // Required fallback for the async SDK script loading race.
@@ -860,7 +865,19 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
           try { if(resumeGameplay) cgGameplayStop(); return await fn(); }
           finally { audioBreakActive=false; if(audioUnlocked) playAudience(); if(resumeGameplay) cgGameplayStart(); }
         }
-        // Basic Launch has no ad breaks. Keep call sites safe without interrupting online gameplay.
+        // Y8 mid-game/menu transition ad. The caller continues even if an ad is unavailable.
+        async function showY8NextAd(name){
+          if(!y8SdkReady || !y8Sdk || typeof y8Sdk.showAd!=='function') return;
+          try {
+            await y8Sdk.showAd({
+              type:'next',
+              name:name,
+              beforeAd:()=>{ if(inGame&&!matchEnded) cgGameplayStop(); },
+              afterAd:()=>{ if(inGame&&!matchEnded) cgGameplayStart(); },
+              adBreakDone:(info)=>console.info('Y8 ad break:',info?.breakStatus)
+            });
+          } catch(e) { console.warn('Y8 next ad unavailable:',e); }
+        }
         async function platformCommercialBreak(resumeGameplay=false){
           if(resumeGameplay) cgGameplayStop();
           await Promise.resolve();
@@ -938,8 +955,49 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         }
         function requestRewardedAdStatus(){ if(socket.connected) socket.emit('rewarded_ad_status'); }
         async function showRewardedAd(){
-          // Y8 build has no ad integration yet. Do not grant ad rewards without a completed ad.
-          if(rewardedAdBtn){ rewardedAdBtn.textContent = 'ADS DISABLED'; rewardedAdBtn.disabled = true; }
+          if(rewardedAdBusy || rewardedAdRemaining<=0) return;
+          if(!y8SdkReady || !y8Sdk || typeof y8Sdk.showAd!=='function'){
+            if(rewardedAdBtn) rewardedAdBtn.textContent='AD NOT READY';
+            setTimeout(renderRewardAdButton,1800);
+            return;
+          }
+          rewardedAdBusy=true; renderRewardAdButton();
+          let adViewed=false;
+          const oldText=rewardedAdBtn.textContent;
+          try {
+            await y8Sdk.showAd({
+              type:'reward',
+              name:'extra-coins-50',
+              beforeAd:()=>{ if(inGame&&!matchEnded) cgGameplayStop(); },
+              afterAd:()=>{ if(inGame&&!matchEnded) cgGameplayStart(); },
+              beforeReward:(showAdFn)=>showAdFn(),
+              adDismissed:()=>{ console.info('Y8 rewarded ad dismissed; no reward.'); },
+              adViewed:()=>{
+                adViewed=true;
+                // The server must validate the claim and daily limit before crediting coins.
+                if(socket.connected){
+                  socket.emit('rewarded_ad_claim', {reward:50}, result=>{
+                    if(result?.ok){
+                      if(result.wallet) applyWalletState(result.wallet);
+                      rewardedAdRemaining=Math.max(0,Number(result.remaining ?? rewardedAdRemaining-1));
+                      renderRewardAdButton();
+                    } else {
+                      requestRewardedAdStatus();
+                      console.warn('Rewarded ad viewed, but server did not confirm the coin reward.',result?.message||'');
+                    }
+                  });
+                } else {
+                  console.warn('Rewarded ad viewed, but the game server is disconnected; coins were not credited.');
+                }
+              },
+              adBreakDone:(info)=>console.info('Y8 rewarded ad break:',info?.breakStatus)
+            });
+          } catch(e) { console.error('Y8 rewarded ad failed:',e); }
+          finally {
+            rewardedAdBusy=false;
+            renderRewardAdButton();
+            if(!adViewed) requestRewardedAdStatus();
+          }
         }
 
         function normalizeStats(st){
@@ -1947,13 +2005,15 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             };
             requestAnimationFrame(frame);
         }
-    document.getElementById('game-over-menu').addEventListener('click', () => { botSearchActive=false; clearTimeout(botFallbackTimer); gameOver.style.display='none'; location.reload(); });
+    document.getElementById('game-over-menu').addEventListener('click', async () => { const btn=document.getElementById('game-over-menu'); if(btn.disabled)return; btn.disabled=true; await showY8NextAd('match-main-menu'); botSearchActive=false; clearTimeout(botFallbackTimer); gameOver.style.display='none'; location.reload(); });
     document.getElementById('play-again-btn').addEventListener('click', () => {
       gameOver.style.display='none'; matchEnded=false; isBotMatch=false; playSubmenu.style.display='none'; matchmakingScreen.style.display='flex';
       const matchProfile = profilePayload(); socket.emit('set_profile', matchProfile); socket.emit('find_match', {profile: matchProfile}); botSearchActive=true; clearTimeout(botFallbackTimer); botFallbackTimer=setTimeout(()=>{if(botSearchActive&&!inGame&&!matchEnded&&socket.connected)startBotMatch();else if(botSearchActive&&!socket.connected){const mt=document.getElementById('matchmaking-text');if(mt)mt.textContent='Server connection failed — reconnecting…';}},15000);
     });
-    document.getElementById('rematch-btn').addEventListener('click', () => {
+    document.getElementById('rematch-btn').addEventListener('click', async () => {
       if(!lastOpponentName) return;
+      const btn=document.getElementById('rematch-btn'); if(btn.disabled)return; btn.disabled=true;
+      await showY8NextAd('match-rematch');
       socket.emit('rematch_challenge', {name:lastOpponentName});
       document.getElementById('rematch-btn').textContent='WAITING…';
       document.getElementById('rematch-btn').classList.add('waiting');
