@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ice Hockey Online</title>
-    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+    <script src="https://integration.gamepix.com/sdk/v3/gamepix.sdk.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
@@ -632,7 +632,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
     <button class="close-x" id="customize-close">×</button>
     <div class="customize-head"><div><h2>Customize</h2><p>Buy and equip your Frame, Player and User Font with coins.</p></div><div class="customize-balance"><span class="coins-icon" style="display:inline-grid;vertical-align:middle">C</span> <span id="customize-coins">0</span></div></div>
     <div class="customize-grid" id="customize-grid"></div>
-    <div class="customize-ad"><div><b>Need more coins?</b><span>Rewarded ads are disabled in CrazyGames Basic Launch.</span></div><button class="reward-ad-btn" id="rewarded-ad-btn">ADS DISABLED</button></div>
+    <div class="customize-ad"><div><b>Need more coins?</b><span>Watch a rewarded ad to earn 50 coins (up to 2 daily).</span></div><button class="reward-ad-btn" id="rewarded-ad-btn">WATCH AD +50</button></div>
   </div>
 </div>
 
@@ -825,27 +825,33 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             return SERVER_URL + '/random-id-photo?t=' + Date.now();
         }
         let cgGameplayActive = false;
-        let crazyGamesReady = false;
+        let gamePixLoaded = false;
+        function gamePixReady(){
+          if(gamePixLoaded) return true;
+          if(!window.GamePix || typeof window.GamePix.loaded!=='function') return false;
+          try { window.GamePix.loaded(); gamePixLoaded=true; return true; }
+          catch(e) { console.warn('GamePix SDK not ready yet.',e); return false; }
+        }
         function cgGameplayStart(){
           if(cgGameplayActive) return;
           cgGameplayActive = true;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart(); } catch(e) { console.debug('CrazyGames gameplayStart unavailable', e); }
+          gamePixReady();
+          try {
+            if(window.GamePix?.gameStart) window.GamePix.gameStart();
+            else if(window.GamePix?.gameplayStart) window.GamePix.gameplayStart();
+          } catch(e) { console.debug('GamePix game start callback unavailable',e); }
         }
         function cgGameplayStop(){
           if(!cgGameplayActive) return;
           cgGameplayActive = false;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStop) window.CrazyGames.SDK.game.gameplayStop(); } catch(e) { console.debug('CrazyGames gameplayStop unavailable', e); }
-        }
-        (async function initCrazyGames(){
           try {
-            if(window.CrazyGames?.SDK?.init) {
-              await window.CrazyGames.SDK.init();
-              crazyGamesReady = true;
-              // If the match began while SDK initialization was pending, report it now.
-              if(cgGameplayActive && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart();
-            }
-          } catch(e) { console.warn('CrazyGames SDK initialization failed; continuing without SDK.', e); }
-        })();
+            if(window.GamePix?.gameStop) window.GamePix.gameStop();
+            else if(window.GamePix?.gameplayStop) window.GamePix.gameplayStop();
+          } catch(e) { console.debug('GamePix game stop callback unavailable',e); }
+        }
+        // GamePix requires loaded() before any SDK feature calls.
+        if(document.readyState==='complete') gamePixReady();
+        else window.addEventListener('load',gamePixReady,{once:true});
         const AUDIO={hit:'assets/audio/hit.mp3',audience:'assets/audio/audience.mp3',win:'assets/audio/win.mp3',lose:'assets/audio/lose.mp3',click:'assets/audio/click.mp3'};
         let audioUnlocked=false, audienceAudio=null, audioBreakActive=false;
         const activeAudios=new Set();
@@ -864,9 +870,15 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         // Basic Launch has no ad breaks. Keep call sites safe without interrupting online gameplay.
         async function platformCommercialBreak(resumeGameplay=false){
           if(resumeGameplay) cgGameplayStop();
-          await Promise.resolve();
-          if(resumeGameplay && inGame && !matchEnded) cgGameplayStart();
+          try {
+            gamePixReady();
+            if(typeof window.GamePix?.interstitialAd==='function'){
+              await window.GamePix.interstitialAd();
+            }
+          } catch(e) { console.warn('GamePix interstitial ad unavailable:',e); }
+          finally { if(resumeGameplay && inGame && !matchEnded) cgGameplayStart(); }
         }
+        document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(inGame&&!matchEnded) cgGameplayStop(); pauseAllGameAudio(); } else if(inGame&&!matchEnded){ cgGameplayStart(); if(audioUnlocked) playAudience(); } });
         document.addEventListener('pointerdown',unlockAudio,{once:true,passive:true});
         document.addEventListener('keydown',unlockAudio,{once:true});
 
@@ -939,8 +951,45 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         }
         function requestRewardedAdStatus(){ if(socket.connected) socket.emit('rewarded_ad_status'); }
         async function showRewardedAd(){
-          // CrazyGames Basic Launch does not include monetization. Do not grant ad rewards without a completed ad.
-          if(rewardedAdBtn){ rewardedAdBtn.textContent = 'ADS DISABLED'; rewardedAdBtn.disabled = true; }
+          if(rewardedAdBusy || rewardedAdRemaining<=0) return;
+          if(!gamePixReady() || typeof window.GamePix?.rewardAd!=='function'){
+            if(rewardedAdBtn) rewardedAdBtn.textContent='AD NOT READY';
+            setTimeout(renderRewardAdButton,1800);
+            return;
+          }
+          rewardedAdBusy=true; renderRewardAdButton();
+          const oldText=rewardedAdBtn?.textContent||'WATCH AD +50';
+          try {
+            await withPlatformPause(async()=>{
+              const result=await window.GamePix.rewardAd();
+              if(result?.success){
+                if(!socket.connected){ console.warn('GamePix ad viewed, but server is disconnected; no coins credited.'); return; }
+                socket.emit('claim_rewarded_ad',{reward:50},claim=>{
+                  if(claim?.granted){
+                    if(claim.wallet) applyWalletState(claim.wallet);
+                    rewardedAdRemaining=Math.max(0,Number(claim.remaining ?? rewardedAdRemaining-1));
+                    renderRewardAdButton();
+                    try{window.GamePix.happyMoment?.();}catch(e){}
+                  } else {
+                    requestRewardedAdStatus();
+                    if(rewardedAdBtn) rewardedAdBtn.textContent=claim?.message||'REWARD FAILED';
+                    setTimeout(renderRewardAdButton,2200);
+                  }
+                });
+              } else {
+                if(rewardedAdBtn) rewardedAdBtn.textContent='AD NOT AVAILABLE';
+                setTimeout(renderRewardAdButton,1800);
+              }
+            },true);
+          } catch(e) {
+            console.warn('GamePix rewarded ad failed:',e);
+            if(rewardedAdBtn) rewardedAdBtn.textContent='AD NOT AVAILABLE';
+            setTimeout(renderRewardAdButton,1800);
+          } finally {
+            rewardedAdBusy=false;
+            renderRewardAdButton();
+            requestRewardedAdStatus();
+          }
         }
 
         function normalizeStats(st){
