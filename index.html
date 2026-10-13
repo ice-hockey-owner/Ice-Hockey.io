@@ -828,17 +828,22 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         let crazyGamesReady = false;
         function cgGameplayStart(){
           if(cgGameplayActive) return;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart(); } catch(e) { console.debug('CrazyGames gameplayStart unavailable', e); }
           cgGameplayActive = true;
+          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart(); } catch(e) { console.debug('CrazyGames gameplayStart unavailable', e); }
         }
         function cgGameplayStop(){
           if(!cgGameplayActive) return;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStop) window.CrazyGames.SDK.game.gameplayStop(); } catch(e) { console.debug('CrazyGames gameplayStop unavailable', e); }
           cgGameplayActive = false;
+          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStop) window.CrazyGames.SDK.game.gameplayStop(); } catch(e) { console.debug('CrazyGames gameplayStop unavailable', e); }
         }
         (async function initCrazyGames(){
           try {
-            if(window.CrazyGames?.SDK?.init) { await window.CrazyGames.SDK.init(); crazyGamesReady = true; }
+            if(window.CrazyGames?.SDK?.init) {
+              await window.CrazyGames.SDK.init();
+              crazyGamesReady = true;
+              // If the match began while SDK initialization was pending, report it now.
+              if(cgGameplayActive && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart();
+            }
           } catch(e) { console.warn('CrazyGames SDK initialization failed; continuing without SDK.', e); }
         })();
         const AUDIO={hit:'assets/audio/hit.mp3',audience:'assets/audio/audience.mp3',win:'assets/audio/win.mp3',lose:'assets/audio/lose.mp3',click:'assets/audio/click.mp3'};
@@ -1472,7 +1477,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             opponentCustomization={frame:'frame-classic',player:'player-red',font:'font-ocean'};
             matchProfilesBySide={left:{name:profileData.name||'Player',customization:customizationSnapshot()},right:{name:activeBotName,customization:opponentCustomization}};
             player={...player,x:150,y:320,vx:0,vy:0}; opponent={...opponent,x:874,y:320,vx:0,vy:0}; opponentTarget={x:874,y:320}; previousOpponent={x:874,y:320};
-            resetPuck(); inGame=true; gameLoop(); playKickoffCountdown();
+            resetPuck(); inGame=true; cgGameplayStart(); gameLoop(); playKickoffCountdown();
         }
         let botLastShotAt = 0;
         function updateBotAI(){
@@ -1627,6 +1632,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
             puck.vx = 0; puck.vy = 0;
 
             inGame = true;
+            cgGameplayStart();
             matchReady = false;
             gameLoop();
             playKickoffCountdown();
@@ -1673,7 +1679,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 
         async function endGame(reason='Time up') {
             if (matchEnded) return;
-            matchEnded = true; inGame = false; matchReady = false; pointerActive=false; pointerTarget=null;
+            matchEnded = true; inGame = false; matchReady = false; pointerActive=false; pointerTarget=null; cgGameplayStop();
             if(isBotMatch){ botSearchActive=false; clearTimeout(botFallbackTimer); try{socket.emit('cancel_match');}catch(e){} }
             cgGameplayStop();
             const myScore = playerSide === 'left' ? scores.left : scores.right;
