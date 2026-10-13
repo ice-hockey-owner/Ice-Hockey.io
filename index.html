@@ -410,6 +410,33 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
 #main-menu .menu-fullscreen-btn{width:42px!important;height:42px!important;padding:0!important;background:#fff!important;border:1px solid #b9dcff!important;border-radius:12px!important;color:#1769e8!important}
 @media(max-width:800px){#main-menu #menu-coins-pill{left:8px!important;top:8px!important;padding:2px 5px!important}#main-menu #menu-coins-pill img{width:14px!important;height:14px!important;max-width:14px!important;max-height:14px!important;flex-basis:14px!important}#main-menu #menu-coins-pill span{font-size:9px!important}#main-menu .menu-utility-cluster{right:8px!important;bottom:8px!important;gap:6px!important}#main-menu .menu-fullscreen-btn,#main-menu .menu-settings-btn{width:36px!important;height:36px!important}}
 
+
+/* Coin counter uses identical physical CSS dimensions on phone and desktop. */
+#main-menu #menu-coins-pill{
+  box-sizing:border-box!important;
+  position:absolute!important;left:20px!important;top:20px!important;right:auto!important;bottom:auto!important;
+  display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;
+  width:172px!important;min-width:172px!important;max-width:172px!important;
+  height:54px!important;min-height:54px!important;max-height:54px!important;
+  padding:8px 12px!important;gap:9px!important;
+  border-radius:16px!important;background:rgba(255,255,255,.96)!important;
+  border:1px solid rgba(23,105,232,.17)!important;
+  box-shadow:0 6px 16px rgba(34,78,116,.10)!important;
+  white-space:nowrap!important;overflow:hidden!important;z-index:100!important;
+}
+#main-menu #menu-coins-pill img.coin-image{
+  display:block!important;width:30px!important;height:30px!important;min-width:30px!important;max-width:30px!important;
+  min-height:30px!important;max-height:30px!important;flex:0 0 30px!important;object-fit:contain!important;
+}
+#main-menu #menu-coins-pill #menu-coins{font-size:17px!important;line-height:1.1!important;font-weight:900!important}
+#main-menu #menu-coins-pill span:last-child{font-size:13px!important;line-height:1.1!important;font-weight:900!important}
+@media(max-width:800px){
+  #main-menu #menu-coins-pill{left:20px!important;top:20px!important;right:auto!important;bottom:auto!important;width:172px!important;min-width:172px!important;max-width:172px!important;height:54px!important;min-height:54px!important;max-height:54px!important;padding:8px 12px!important;gap:9px!important}
+  #main-menu #menu-coins-pill img.coin-image{width:30px!important;height:30px!important;min-width:30px!important;max-width:30px!important;min-height:30px!important;max-height:30px!important;flex-basis:30px!important}
+  #main-menu #menu-coins-pill #menu-coins{font-size:17px!important}
+  #main-menu #menu-coins-pill span:last-child{font-size:13px!important}
+}
+
 </style>
 </head>
 <body>
