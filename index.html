@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ice Hockey Online</title>
-    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+    <script src="https://cdn.y8.com/minimal-sdk/2-0/y8.min.js" async></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
@@ -824,28 +824,27 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         function defaultAvatarUrl() {
             return SERVER_URL + '/random-id-photo?t=' + Date.now();
         }
-        let cgGameplayActive = false;
-        let crazyGamesReady = false;
-        function cgGameplayStart(){
-          if(cgGameplayActive) return;
-          cgGameplayActive = true;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart(); } catch(e) { console.debug('CrazyGames gameplayStart unavailable', e); }
-        }
-        function cgGameplayStop(){
-          if(!cgGameplayActive) return;
-          cgGameplayActive = false;
-          try { if(crazyGamesReady && window.CrazyGames?.SDK?.game?.gameplayStop) window.CrazyGames.SDK.game.gameplayStop(); } catch(e) { console.debug('CrazyGames gameplayStop unavailable', e); }
-        }
-        (async function initCrazyGames(){
+        // Y8 SDK integration. Paste the App ID from Y8 Developer Portal > SDK Initialization.
+        const Y8_APP_ID = 'YOUR_Y8_APP_ID';
+        let y8Sdk = null;
+        let y8SdkReady = false;
+        let cgGameplayActive = false; // Kept as the game's internal match-lifecycle flag.
+        function cgGameplayStart(){ cgGameplayActive = true; }
+        function cgGameplayStop(){ cgGameplayActive = false; }
+        window.addEventListener('y8sdk.ready', function(){
           try {
-            if(window.CrazyGames?.SDK?.init) {
-              await window.CrazyGames.SDK.init();
-              crazyGamesReady = true;
-              // If the match began while SDK initialization was pending, report it now.
-              if(cgGameplayActive && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart();
-            }
-          } catch(e) { console.warn('CrazyGames SDK initialization failed; continuing without SDK.', e); }
-        })();
+            y8Sdk = window.y8.sdk();
+            y8Sdk.init({ appId: Y8_APP_ID, autoLogin: true });
+            y8SdkReady = true;
+            y8Sdk.onAuth((user, error) => {
+              if (error) { console.warn('Y8 authentication unavailable; continuing as guest.', error); return; }
+              if (user && user.nickname) console.info('Y8 player:', user.nickname);
+            });
+            if (Y8_APP_ID === 'YOUR_Y8_APP_ID') console.warn('Set Y8_APP_ID before uploading this build.');
+          } catch(e) { console.warn('Y8 SDK initialization failed; game will continue without account features.', e); }
+        }, { once: true });
+        // Required fallback for the async SDK script loading race.
+        if (window.y8 && window.y8.emitReadyEvent) window.y8.emitReadyEvent();
         const AUDIO={hit:'assets/audio/hit.mp3',audience:'assets/audio/audience.mp3',win:'assets/audio/win.mp3',lose:'assets/audio/lose.mp3',click:'assets/audio/click.mp3'};
         let audioUnlocked=false, audienceAudio=null, audioBreakActive=false;
         const activeAudios=new Set();
