@@ -632,7 +632,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
     <button class="close-x" id="customize-close">×</button>
     <div class="customize-head"><div><h2>Customize</h2><p>Buy and equip your Frame, Player and User Font with coins.</p></div><div class="customize-balance"><span class="coins-icon" style="display:inline-grid;vertical-align:middle">C</span> <span id="customize-coins">0</span></div></div>
     <div class="customize-grid" id="customize-grid"></div>
-    <div class="customize-ad"><div><b>Need more coins?</b><span>Rewarded ads are disabled in CrazyGames Basic Launch.</span></div><button class="reward-ad-btn" id="rewarded-ad-btn">ADS DISABLED</button></div>
+    <div class="customize-ad"><div><b>Need more coins?</b><span>Rewarded ads are not enabled in this Y8 build.</span></div><button class="reward-ad-btn" id="rewarded-ad-btn">ADS DISABLED</button></div>
   </div>
 </div>
 
@@ -938,7 +938,7 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
         }
         function requestRewardedAdStatus(){ if(socket.connected) socket.emit('rewarded_ad_status'); }
         async function showRewardedAd(){
-          // CrazyGames Basic Launch does not include monetization. Do not grant ad rewards without a completed ad.
+          // Y8 build has no ad integration yet. Do not grant ad rewards without a completed ad.
           if(rewardedAdBtn){ rewardedAdBtn.textContent = 'ADS DISABLED'; rewardedAdBtn.disabled = true; }
         }
 
