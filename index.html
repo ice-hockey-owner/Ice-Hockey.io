@@ -860,6 +860,51 @@ img{max-width:100%}
         }
         let cgGameplayActive = false;
         let crazyGamesReady = false;
+        // CrazyGames friend invites carry the exact private room code used by Socket.IO.
+        let cgPendingRoomUpdate = null;
+        let cgInviteJoinRequested = false;
+        let cgInstantRoomRequested = false;
+        function cgUpdateRoom(roomId, isJoinable, inviteParams = {}) {
+          cgPendingRoomUpdate = { roomId: String(roomId || ''), isJoinable: !!isJoinable, inviteParams: inviteParams || {} };
+          if (!crazyGamesReady) return;
+          try {
+            const game = window.CrazyGames?.SDK?.game;
+            if (game?.updateRoom && cgPendingRoomUpdate.roomId) game.updateRoom(cgPendingRoomUpdate);
+          } catch (e) { console.debug('CrazyGames updateRoom unavailable', e); }
+        }
+        function cgLeaveRoom() {
+          cgPendingRoomUpdate = null;
+          try {
+            const game = window.CrazyGames?.SDK?.game;
+            if (crazyGamesReady && game?.hideInviteButton) game.hideInviteButton();
+            if (crazyGamesReady && game?.leftRoom) game.leftRoom();
+          } catch (e) { console.debug('CrazyGames leftRoom unavailable', e); }
+        }
+        function cgInviteCode(params) {
+          if (!params || typeof params !== 'object') return '';
+          const raw = params.roomCode || params.code || params.room || params.roomId;
+          return typeof raw === 'string' || typeof raw === 'number' ? String(raw).trim().toUpperCase() : '';
+        }
+        function cgJoinInvitedRoom(params) {
+          const code = cgInviteCode(params);
+          if (!code || cgInviteJoinRequested) return;
+          cgInviteJoinRequested = true;
+          const join = () => {
+            if (!socket.connected) { cgInviteJoinRequested = false; return; }
+            const p = profilePayload();
+            roomModal.style.display = 'none';
+            mainMenu.style.display = 'none';
+            playSubmenu.style.display = 'none';
+            matchmakingScreen.style.display = 'flex';
+            const mt = document.getElementById('matchmaking-text');
+            if (mt) mt.textContent = 'Joining your friend…';
+            socket.emit('set_profile', p);
+            socket.emit('join_room', { code, roomCode: code, room: code, profile: p, player: p, name: profileData?.name || '' });
+          };
+          if (socket.connected) join();
+          else socket.once('connect', join);
+        }
+        function cgJoinRoomListener(params) { cgJoinInvitedRoom(params); }
         function cgGameplayStart(){
           if(cgGameplayActive) return;
           cgGameplayActive = true;
@@ -875,8 +920,22 @@ img{max-width:100%}
             if(window.CrazyGames?.SDK?.init) {
               await window.CrazyGames.SDK.init();
               crazyGamesReady = true;
+              const cgGame = window.CrazyGames?.SDK?.game;
+              if (cgPendingRoomUpdate && cgGame?.updateRoom) {
+                try { cgGame.updateRoom(cgPendingRoomUpdate); } catch(e) { console.debug('CrazyGames room restore failed', e); }
+              }
+              if (cgGame?.addJoinRoomListener) cgGame.addJoinRoomListener(cgJoinRoomListener);
+              // The invite may be present before this page's Socket.IO connection is ready.
+              if (cgGame?.inviteParams) cgJoinInvitedRoom(cgGame.inviteParams);
+              // CrazyGames Multiplayer landing page must open a private, immediately joinable room.
+              if (cgGame?.isInstantMultiplayer && !cgGame?.inviteParams && !cgInstantRoomRequested) {
+                cgInstantRoomRequested = true;
+                const instantProfile = profilePayload();
+                socket.emit('set_profile', instantProfile);
+                socket.emit('create_room', { profile: instantProfile, source: 'crazygames-instant-multiplayer' });
+              }
               // If the match began while SDK initialization was pending, report it now.
-              if(cgGameplayActive && window.CrazyGames?.SDK?.game?.gameplayStart) window.CrazyGames.SDK.game.gameplayStart();
+              if(cgGameplayActive && cgGame?.gameplayStart) cgGame.gameplayStart();
             }
           } catch(e) { console.warn('CrazyGames SDK initialization failed; continuing without SDK.', e); }
         })();
@@ -1163,6 +1222,9 @@ img{max-width:100%}
             roomModalTitle.textContent = "Your Room Code";
             roomModalBody.innerHTML = `<p style="font-size:1.2rem; margin-bottom:15px;">Share this code with your friend:</p><div style="font-size:2.5rem; font-weight:900; color:#38bdf8; background:#0f172a; padding:10px; border-radius:10px; border:2px dashed #38bdf8; letter-spacing:4px; margin-bottom:15px;">${code}</div><p style="font-size:1rem; color:#94a3b8;">Waiting for friend to join...</p>`;
             roomModal.style.display = 'flex';
+            cgInviteJoinRequested = false;
+            // CrazyGames platform friends use this same room code to join the lobby.
+            cgUpdateRoom(code, true, { roomCode: code });
         });
 
         // Join Room
@@ -1182,6 +1244,9 @@ img{max-width:100%}
         });
 
         socket.on('join_error', (data) => {
+            cgInviteJoinRequested = false;
+            const mt = document.getElementById('matchmaking-text');
+            if (mt && data?.message) mt.textContent = data.message;
             const btn=document.getElementById('submit-join-btn'); if(btn){btn.disabled=false;btn.textContent='CONNECT';}
             alert(data?.message || data?.error || 'Could not join that room. Check the code and try again.');
         });
@@ -1616,6 +1681,8 @@ img{max-width:100%}
             // A real opponent supersedes the temporary bot match. The normal kickoff countdown below freezes play.
             isBotMatch=false;
             currentRoom = data.room;
+            // The two-player room is full once the match starts; stop advertising it as joinable.
+            cgUpdateRoom(currentRoom, false, { roomCode: String(currentRoom || '') });
             playerSide = data.side;
             matchStartAt = data.startAt || Date.now();
             matchEnded = false;
@@ -1705,6 +1772,7 @@ img{max-width:100%}
         socket.on('game_ended', data => endGame(data?.reason || 'Time up'));
 
         socket.on('opponent_disconnected', () => {
+            cgLeaveRoom();
             if (matchEnded) return;
             cgGameplayStop();
             alert('Opponent disconnected!');
@@ -1713,7 +1781,7 @@ img{max-width:100%}
 
         async function endGame(reason='Time up') {
             if (matchEnded) return;
-            matchEnded = true; inGame = false; matchReady = false; pointerActive=false; pointerTarget=null; cgGameplayStop();
+            matchEnded = true; inGame = false; matchReady = false; pointerActive=false; pointerTarget=null; cgGameplayStop(); cgLeaveRoom();
             if(isBotMatch){ botSearchActive=false; clearTimeout(botFallbackTimer); try{socket.emit('cancel_match');}catch(e){} }
             cgGameplayStop();
             const myScore = playerSide === 'left' ? scores.left : scores.right;
