@@ -437,6 +437,40 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
   #main-menu #menu-coins-pill span:last-child{font-size:13px!important}
 }
 
+
+/* CrazyGames resubmission: consistency, readability and responsive fit */
+#game-container{min-height:100dvh;min-height:100vh}
+#main-menu,#play-submenu{overscroll-behavior:contain;scrollbar-width:thin}
+.game-title{max-width:94vw;text-align:center}
+.game-title-logo{display:block;width:min(64vw,590px);max-width:100%;height:auto;max-height:19vh;object-fit:contain;filter:drop-shadow(0 8px 18px rgba(24,191,255,.22))}
+#main-menu #menu-coins-pill{width:172px!important;min-width:172px!important;max-width:172px!important;height:54px!important;min-height:54px!important;max-height:54px!important;padding:8px 12px!important;gap:9px!important}
+#main-menu #menu-coins-pill img.coin-image{width:30px!important;height:30px!important;min-width:30px!important;max-width:30px!important;min-height:30px!important;max-height:30px!important;flex:0 0 30px!important}
+#main-menu #menu-coins-pill #menu-coins{font-size:17px!important;line-height:1.1!important}
+#main-menu #menu-coins-pill span:last-child{font-size:13px!important;line-height:1.1!important}
+.menu-btn{min-height:54px;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:1px}
+.menu-btn:focus-visible,.modal-btn:focus-visible,button:focus-visible{outline:3px solid #b6efff;outline-offset:3px}
+button:disabled{cursor:not-allowed;filter:saturate(.55);opacity:.72}
+.modal-content,.game-over-card{overscroll-behavior:contain}
+img{max-width:100%}
+@media(max-width:800px){
+  #main-menu,#play-submenu{padding:84px 14px max(22px,env(safe-area-inset-bottom));gap:2px}
+  .game-title{position:relative;top:auto;left:auto;transform:none;width:100%;margin:12px 0 18px;letter-spacing:-1px}
+  .game-title-logo{width:min(82vw,430px);max-height:15vh;margin:auto}
+  #main-menu .menu-btn,#play-submenu .menu-btn{width:min(340px,88vw);min-height:50px;margin:5px 0;padding:12px 16px;font-size:15px}
+  #main-menu #menu-coins-pill{left:max(10px,env(safe-area-inset-left))!important;top:max(10px,env(safe-area-inset-top))!important}
+  .top-right-profile{max-width:calc(100vw - 20px)}
+}
+@media(max-height:620px) and (orientation:landscape){
+  #main-menu,#play-submenu{justify-content:flex-start;padding-top:68px;padding-bottom:14px}
+  .game-title{position:relative;top:auto;left:auto;transform:none;margin:0 0 10px;font-size:clamp(2rem,7vh,3.5rem)}
+  .game-title-logo{width:min(45vw,360px);max-height:12vh}
+  #main-menu .menu-btn,#play-submenu .menu-btn{min-height:42px;padding:8px 14px;margin:3px 0;font-size:14px}
+  .top-right-profile{top:8px;right:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
 </style>
 </head>
 <body>
