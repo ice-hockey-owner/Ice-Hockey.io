@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ice Hockey Online</title>
+    <title>Ice Hockey Online — 3D-Style Multiplayer Hockey</title>
+    <meta name="description" content="Fast, arcade-style online ice hockey. Play quick matches, challenge friends, customise your look and climb the leaderboard.">
+    <meta name="theme-color" content="#020811">
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
     <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:"Baloo 2",system-ui,sans-serif;font-weight:800}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-weight:800}
 :root{--ice:#eaf7ff;--blue:#18bfff;--blue2:#0877ff;--navy:#071321;--panel:rgba(7,19,33,.88);--line:rgba(103,210,255,.28);--green:#22e6a7;--red:#ff4968;--purple:#9b6cff}
 html,body{width:100%;height:100%;overflow:hidden;background:#020811;color:#fff;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #landscape-overlay{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#123e5c,#020811 75%);text-align:center;padding:24px}
@@ -47,6 +46,11 @@ button,input{font:inherit}input,textarea{user-select:text;-webkit-user-select:te
 #friend-status{min-height:20px;margin:7px 3px;color:#70d9ff;font-size:12px;font-weight:800}
 .chat-content{max-width:680px}.chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.chat-head-avatar{width:40px;height:40px;border-radius:12px;object-fit:cover}.chat-messages{height:min(48vh,480px);overflow:auto;background:#04101b;border:1px solid #163549;border-radius:15px;padding:12px;text-align:left}.chat-bubble{max-width:78%;margin:7px 0;padding:9px 11px;border-radius:13px;background:#102b3c;color:#dff6ff;overflow-wrap:anywhere}.chat-bubble.mine{margin-left:auto;background:linear-gradient(135deg,#075d92,#104f7d)}.chat-bubble small{display:block;opacity:.5;margin-top:4px;font-size:9px}.chat-author{display:flex;align-items:center;gap:7px;margin-bottom:4px}.chat-avatar-frame{width:28px;height:28px;border:3px solid #7dcbea;border-radius:50%;padding:1px;background:#dff5ff;overflow:hidden;flex:0 0 auto}.chat-avatar-frame img{width:100%;height:100%;border-radius:50%;object-fit:cover}.chat-media{max-width:100%;max-height:220px;border-radius:9px;margin-top:6px}.chat-compose{display:flex;gap:7px;margin-top:10px}.chat-compose input[type=text]{flex:1;min-width:0;border:1px solid #28566e;border-radius:11px;padding:11px;background:#06121e;color:#fff;outline:none}.attach-btn{width:45px;border:0;border-radius:11px;background:#6d48cf;color:#fff;font-size:22px}.send-btn{min-width:70px}#chat-attachment-preview{font-size:11px;color:#82a9bc;text-align:left;margin:6px 2px}
 #game-over{display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;background:rgba(1,7,13,.76);backdrop-filter:blur(8px);pointer-events:auto}.game-over-card{width:min(420px,90vw);padding:28px;border:1px solid rgba(103,210,255,.3);border-radius:22px;text-align:center;background:linear-gradient(160deg,#0c2233,#06101b);box-shadow:0 30px 90px #000}.game-over-card h2{font-size:38px;font-weight:1000}.final-score{font-size:54px;font-weight:1000;color:#61d8ff;margin:12px 0}.final-score span{color:#7893a3}.game-over-card .menu-btn{width:100%;margin-top:12px}
+/* Platform polish: keep the game readable and responsive without remote font requests. */
+:focus-visible{outline:3px solid #79e0ff;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 /* scrollbar */
 *{scrollbar-width:thin;scrollbar-color:#1679a5 #06121e}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#06121e;border-radius:10px}::-webkit-scrollbar-thumb{background:linear-gradient(#19bce9,#1764a0);border-radius:10px;border:2px solid #06121e}::-webkit-scrollbar-thumb:hover{background:#28d0ff}
 @media(max-width:800px){
@@ -1760,6 +1764,10 @@ html,body,#game-container{width:100%;height:100%;height:100dvh;overflow:hidden}
                 if (leaderboardModal.style.display === 'flex') requestLeaderboard();
             } else {
                 releasePointerControl();
+                pauseAllGameAudio();
+            }
+            if (document.visibilityState === 'visible' && audioUnlocked && inGame && !matchEnded) {
+                playAudience();
             }
         });
 
